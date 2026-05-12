@@ -15,21 +15,12 @@ subroutine snapshot
   real(wp) ubin_max,pbin_max,ebin_max,xtmp,ytmp,ztmp
   real(wp),dimension(0:mpsi) :: marker,fflows,dflows,ftem,dtem
   real(wp),dimension(mbin_u,mbin_psi) :: ubin,dubin,pbin,dpbin,ebin,debin
-!  real(wp),dimension(mzeta,0:mpsi,0:mthetamax) :: ftotal,tpara,tperp
   real(wp),external :: boozer2x,boozer2z,r2psi
   real(wp),dimension(:,:,:),allocatable::booz_out,flux3darray
   real(wp),dimension(:,:),allocatable::dataout_u,dataout_r
   character(len=11) date,time
   character(len=13) cdum
 
-#ifdef ADIOS
-  character(len=30) bpdum
-  integer*8 file_handle, group_handle
-  #define ADIOS_WRITE(a,b) call adios_write(a,'b'//char(0),b)
-#endif
-
-! write particle data for re-run
-!!  call restart_write
   call restart_io("write")
 ! number of poloidal grid
   jm=mtheta(mpsi/2)
@@ -58,9 +49,6 @@ subroutine snapshot
   dflows=0.0
   ftem=0.0
   dtem=0.0
-!  ftotal=0.0
-!  tpara=0.0
-!  tperp=0.0
 
      do m=1,mi 
         weight=zion0(6,m)
@@ -104,26 +92,7 @@ subroutine snapshot
         dflows(ip)=dflows(ip)+zion(5,m)*upara
         ftem(ip)=ftem(ip)+energy*weight
         dtem(ip)=dtem(ip)+zion(5,m)*energy
-     
-! parallel and perpendicular pressure perturbation
-!     ftotal(kz,ip,jt)=ftotal(kz,ip,jt)+weight
-!     tpara(kz,ip,jt)=tpara(kz,ip,jt)+zion(5,m)*0.5*upara*upara
-!     tperp(kz,ip,jt)=tperp(kz,ip,jt)+zion(5,m)*energy
      enddo
-
-!  do i=0,mpsi
-!     tpara(:,i,mtheta(i))=tpara(:,i,mtheta(i))+tpara(:,i,0)
-!     tperp(:,i,mtheta(i))=tperp(:,i,mtheta(i))+tperp(:,i,0)
-!     ftotal(:,i,mtheta(i))=ftotal(:,i,mtheta(i))+ftotal(:,i,0)
-!  enddo
-
-! do i=0,mpsi
-!    ftotal(:,i,1:mtheta(i))=max(1.0e-6,ftotal(:,i,1:mtheta(i)))
-!     tpara(:,i,1:mtheta(i))=tpara(:,i,1:mtheta(i))/ftotal(:,i,1:mtheta(i))
-!     tperp(:,i,1:mtheta(i))=tperp(:,i,1:mtheta(i))/ftotal(:,i,1:mtheta(i))
-!     ftotal(:,i,1:mtheta(i))=ftotal(:,i,1:mtheta(i))*markeri(:,i,1:mtheta(i))
-!     ftotal(:,i,0)=ftotal(:,i,mtheta(i))
-!  enddo
 
   icount=mbin_psi*mbin_u
   call MPI_REDUCE(ubin,bdum,icount,mpi_Rsize,MPI_SUM,0,MPI_COMM_WORLD,ierror)
@@ -165,12 +134,6 @@ subroutine snapshot
        jm*mzeta,mpi_Rsize,0,toroidal_comm,ierror)
   
   if(mype == 0)then
-! normalization
-     !dubin=dubin/max(1.0,ubin)
-     !dpbin=dpbin/max(1.0,pbin)
-     !debin=debin/max(1.0,ebin)
-
-!!******
      allocate(booz_out(mpsi,0:jm,3))
      allocate(dataout_r(1:mpsi,8))
      allocate(dataout_u(1:mbin_u,mbin_psi*6+3))
@@ -184,7 +147,6 @@ subroutine snapshot
      debin=debin/ebin_max
          
 ! open snapshot output file
-     !nsnap=int(real(mstepall+istep)*tstep/1000.0)
      nsnap=mstepall+istep
      write(cdum,'("snap",i5.5,".out")')nsnap
      open(snapout,file=cdum,status='replace')
@@ -240,7 +202,6 @@ subroutine snapshot
      enddo
      write(snapout,102)(zonali(i),i=1,mpsi)
      write(snapout,102)(phip00(i)/gyroradius,i=1,mpsi)
-!     write(snapout,102)(phi00(i)/gyroradius**2,i=1,mpsi)
      write(snapout,102)(marker(i),i=1,mpsi)
      write(snapout,102)(fflows(i),i=1,mpsi)
      write(snapout,102)(dflows(i),i=1,mpsi)
@@ -292,7 +253,6 @@ subroutine snapshot
                 gyroradius**2
            booz_out(i,j,3)=xtmp
            write(snapout,102)xtmp
-!!           write(snapout,102)wt*densityi(0,igrid(i)+jt)+(1.0-wt)*densityi(0,igrid(i)+jt-1)
         enddo
      enddo
 
@@ -322,38 +282,6 @@ subroutine snapshot
 ! close snapshot file
      close(snapout)
 
-!!write snapshot.adio
-#ifdef ADIOS
-     write(bpdum,'("snap_",i5.5,".bp")')nsnap
-     bpdum=trim(bpdum)//char(0)
-     call adios_get_group (group_handle, "snapshot"//char(0))
-     call adios_open (file_handle, group_handle, bpdum)
-     call adios_write (file_handle, "timestep"//char(0), (mstepall+istep))
-     call adios_write (file_handle, "time"//char(0), q0+0.5*q1+0.25*q2)
-     !!!!if(mype==0)write(*,*)"filename,group_handle,file_handle",bpdum,group_handle,file_handle
-     call adios_write (file_handle, "3+mbin_psi*6"//char(0), 3+mbin_psi*6)
-     call adios_write (file_handle, "jm+1"//char(0), jm+1)
-     ADIOS_WRITE(file_handle,mbin_u)
-     ADIOS_WRITE(file_handle,mbin_psi)
-     ADIOS_WRITE(file_handle,mpsi)
-     ADIOS_WRITE(file_handle,jm)
-     ADIOS_WRITE(file_handle,mzetamax)
-     call adios_write(file_handle,"num_of_quantities"//char(0),i)
-     ! poloidal cross section: marker,density,potential,parallel flow and temperature
-     !!call adios_write (file_handle, "jm+1"//char(0), jm+1)
-     ADIOS_WRITE(file_handle,jm)
-     ADIOS_WRITE(file_handle,ntoroidal)
-     ADIOS_WRITE(file_handle,mzeta)
-     ADIOS_WRITE(file_handle,num_mode)
-     ADIOS_WRITE(file_handle,m_poloidal)
-     call adios_write (file_handle, "modeeigen"//char(0), nmode)
-     ADIOS_WRITE(file_handle,dataout_u)
-     ADIOS_WRITE(file_handle,dataout_r)
-     call adios_write (file_handle, "dataout_p"//char(0), booz_out)
-     call adios_write (file_handle, "dataout_f"//char(0), flux3darray)
-     call adios_write (file_handle, "dataeigen"//char(0), eigenmode)
-     call adios_close(file_handle)
-#endif
      deallocate(booz_out)  
      deallocate(dataout_u)  
      deallocate(dataout_r)  
@@ -376,4 +304,3 @@ subroutine snapshot
 102 format(e10.4)
   
 end subroutine snapshot
-

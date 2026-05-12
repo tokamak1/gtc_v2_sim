@@ -62,31 +62,7 @@ subroutine write_tracked_particles
  
   integer :: j,ntpart(0:numberpe-1)
   character(len=10) :: cdum
-#if ADIOS
-    character(len=50),SAVE:: fname
-    character(len=50)::dirstr
-    integer*8 :: group_id, buf_id,comm
-    #define ADIOS_WRITE(a,b) call adios_write(a,'b'//char(0),b)
-#endif
 
-
-#if ADIOS
-    comm=MPI_COMM_WORLD
-    write(fname,'("trackp_dir/TRACKP_",i5.5,".bp")')mstepall+istep
-    fname=trim(fname)//char(0)
-    write(dirstr,'("node_",i5.5)')mype
-    dirstr=trim(dirstr)//char(0)
-    call adios_get_group (group_id, "particles"//char(0))
-    call adios_set_path (group_id,dirstr//char(0))
-    call adios_open (buf_id, group_id, fname)
-    ADIOS_WRITE(buf_id,comm)
-    ADIOS_WRITE(buf_id,mype)
-    ADIOS_WRITE(buf_id,nparam)
-    ADIOS_WRITE(buf_id,nspec)
-    call adios_close (buf_id)
-    if(mype==0)write(*,*)"tracking filename ",fname
-#else
-  
      write(cdum,'("TRACKP.",i5.5)')mype
      open(57,file=cdum,status='unknown',position='append')
      write(57,*)istep
@@ -97,7 +73,6 @@ subroutine write_tracked_particles
      enddo
 
      close(57)
-#endif
 
 end subroutine write_tracked_particles
 

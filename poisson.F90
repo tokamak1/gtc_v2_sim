@@ -59,7 +59,6 @@ subroutine poisson(iflag)
     izeta2=mzeta
   endif
 
-  !!!do k=1,mzeta
   do k=izeta1,izeta2
 
 ! first iteration, first guess of phi. (1+T_i/T_e) phi - phi_title = n_i
@@ -88,9 +87,6 @@ subroutine poisson(iflag)
            perr(i)=ptilde(i)-gamma*phitmp(i)
            phitmp(i)=(dentmp(i)+perr(i))*tmp
         enddo
-!        prms=sum(perr*perr)/sum(phitmp*phitmp)
-!        if(mype==0)write(*,*)istep,prms
-
 ! radial boundary
         phitmp(igrid(0):igrid(0)+mtheta(0))=0.0
         phitmp(igrid(mpsi):igrid(mpsi)+mtheta(mpsi))=0.0
@@ -323,6 +319,5 @@ subroutine poisson_initial(mring,mindex,nindex,indexp,ring)
 end subroutine poisson_initial
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 

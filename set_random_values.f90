@@ -89,9 +89,4 @@ subroutine set_random_zion
   endif
 
 ! Debug statements
-!  do i=1,mi
-!     write(mype+50,*)(i+mi*mype),zion(2:6,i)
-!  enddo
-!  close(mype+50)
-
 end subroutine set_random_zion

@@ -17,9 +17,6 @@ subroutine smooth(iflag)
        allzeta((idiag2-idiag1+1)*mtdiag*mtdiag/ntoroidal),xz(mtdiag)
   complex(wp) y_eigen(mtdiag/ntoroidal*num_mode),yz(mtdiag/2+1),&
        yt(mtdiag*num_mode),ye(mtdiag),yp(mpsi/2+1)
-! the dummy array size for thread-safe FFT assume data array size <16384
-  real(doubleprec) :: aux1f(25000),aux1b(25000),aux2f(20000),aux2b(20000)
-  real(doubleprec) :: aux3f(1),aux3b(1)
   real(wp) :: scale
   real(wp) energy_unit,energy_unit_sq
 
@@ -227,24 +224,9 @@ subroutine smooth(iflag)
 ! Interpolate on a flux surface from fieldline coordinates to magnetic
 ! coordinates. Use mtdiag for both poloidal and toroidal grid points.
   if(iflag>1)then
-!     if(nonlinear<0.5 .or. (iflag==3 .and. idiag==0))then
      if(nonlinear<0.5)then
         xz=0.0
         yz=0.0
-#ifdef __ESSL
-      ! Initialization of the FFT tables.
-        if(wp==singleprec)then
-           call srcft(1,xz,0,yz,0,mtdiag,1, 1,1.0,aux1f,25000,&
-                      aux2f,20000,aux3f,1)
-           call scrft(1,yz,0,xz,0,mtdiag,1,-1,1.0,aux1b,25000,&
-                      aux2b,20000,aux3b,1)
-        else
-           call drcft(1,xz,0,yz,0,mtdiag,1, 1,1.0,aux1f,25000,&
-                      aux2f,20000,aux3f,1)
-           call dcrft(1,yz,0,xz,0,mtdiag,1,-1,1.0,aux1b,25000,&
-                      aux2b,20000,aux3b,1)
-        endif
-#endif
      
         mzbig=max(1,mtdiag/mzetamax)
         mzmax=mzetamax*mzbig
@@ -299,7 +281,7 @@ subroutine smooth(iflag)
         enddo
         
 ! transform to k space
-!$omp parallel do private(j,i,kz,k,indt1,indt,indp,xz,yz) firstprivate(aux2f,aux3f,aux2b,aux3b)
+!$omp parallel do private(j,i,kz,k,indt1,indt,indp,xz,yz)
         do j=1,meachtheta
            indt1=(j-1)*mz
            do i=idiag1,idiag2
@@ -312,17 +294,7 @@ subroutine smooth(iflag)
                  enddo
               enddo
               
-#ifdef __ESSL
-              if(wp==singleprec)then
-                 call srcft(0,xz,0,yz,0,mtdiag,1, 1,1.0,aux1f,25000,&
-                            aux2f,20000,aux3f,1)
-              else
-                 call drcft(0,xz,0,yz,0,mtdiag,1, 1,1.0,aux1f,25000,&
-                            aux2f,20000,aux3f,1)
-              endif
-#else
               call fftr1d(1,mtdiag,scale,xz,yz,2)
-#endif
 
 ! record mode information for diagnostic
               if(i==mpsi/2)then
@@ -336,17 +308,7 @@ subroutine smooth(iflag)
                  yz=filter*yz
 
 ! transform back to real space
-#ifdef __ESSL
-                 if(wp==singleprec)then
-                    call scrft(0,yz,0,xz,0,mtdiag,1,-1,1.0,aux1b,25000,&
-                               aux2b,20000,aux3b,1)
-                 else
-                    call dcrft(0,yz,0,xz,0,mtdiag,1,-1,1.0,aux1b,25000,&
-                               aux2b,20000,aux3b,1)
-                 endif
-#else
                  call fftr1d(-1,mtdiag,scale,xz,yz,2)
-#endif
 
 ! transpose back to (ntoroidal,mz)
                  do kz=0,ntoroidal-1
@@ -438,13 +400,10 @@ subroutine smooth(iflag)
      do i=0,mpsi
         efield=efield+sum(phi(1:mzeta,igrid(i)+1:igrid(i)+mtheta(i))**2)
      enddo
-     !!!efield=sqrt(efield/real(mzeta*sum(mtheta)))/(gyroradius*gyroradius)
      energy_unit=gyroradius*gyroradius
      energy_unit_sq=energy_unit*energy_unit
      efield=efield/(real(mzeta*sum(mtheta))*energy_unit_sq)
 
-     !!write(0,*)'**** mype=',mype,'  efield=',efield
-     
 ! record zonal flow mode history
      call fftr1d(1,mpsi,scale,phip00(1:mpsi),yp,1)
 

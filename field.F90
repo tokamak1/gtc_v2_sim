@@ -58,7 +58,6 @@ subroutine field
   sendr=phi(mzeta,:)
   recvl=0.0
   icount=mgrid
-  !!idest=mod(mype+1,numberpe)
   idest=right_pe
   isource=left_pe
   isendtag=myrank_toroidal
@@ -69,11 +68,8 @@ subroutine field
 ! send phi to left and receive from right
   sendl=phi(1,:)
   recvr=0.0
-  !!idest=mod(mype-1+numberpe,numberpe)
   idest=left_pe
-  !!isource=mod(mype+1,numberpe)
   isource=right_pe
-  !!isendtag=mype
   isendtag=myrank_toroidal
   irecvtag=isource
   call MPI_SENDRECV(sendl,icount,mpi_Rsize,idest,isendtag,&
@@ -189,4 +185,3 @@ subroutine field
   
 end subroutine field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-

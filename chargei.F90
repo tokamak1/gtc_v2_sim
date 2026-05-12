@@ -16,7 +16,6 @@ subroutine chargei
 
 #ifdef _OPENMP
 ! We need the following temporary array only when using OpenMP
-!!!  real,dimension(:,:),allocatable :: dnitmp
 #endif
 
   delr=1.0/deltar 
@@ -75,15 +74,10 @@ subroutine chargei
 #ifdef _OPENMP
 ! The following lines are OpenMP directives for loop-level parallelism
 ! on shared memory machines (see http://www.openmp.org).
-! When compiling with the OpenMP option (-qsmp=omp for the XLF compiler on
-! AIX and -mp for the MIPSpro compiler on IRIX), the preprocessor variable
-! _OPENMP is automatically defined and we use it here to add pieces of codes
-! needed to avoid contentions between threads. In the following parallel
-! loop each thread has its own private array "dnitmp()" which is used to
-! prevent the thread from writing into the shared array "densityi()"
-!
+! When compiling with OpenMP, the _OPENMP preprocessor variable is
+! automatically defined. We use it here so each thread has its own private
+! dnitmp() array and avoids writing directly into the shared densityi().
 !$omp parallel private(dnitmp)
-!!!!  allocate(dnitmp(0:mzeta,mgrid))
   dnitmp=0.   ! Set array elements to zero
 #endif
 !$omp do private(m,larmor,weight,kk,wz1,wz0,wp1,wp0,wt10,wt00,wt11,wt01,ij)
@@ -155,7 +149,6 @@ subroutine chargei
      enddo
   enddo
 !$omp end critical
-!!!!  deallocate(dnitmp)
 #endif
 !$omp end parallel
 
@@ -182,9 +175,7 @@ subroutine chargei
   sendl=densityi(0,:)
   recvr=0.0
   icount=mgrid
-  !!!idest=mod(myrank_toroidal-1+ntoroidal,ntoroidal)
   idest=left_pe
-  !!!isource=mod(myrank_toroidal+1,ntoroidal)
   isource=right_pe
   isendtag=myrank_toroidal
   irecvtag=isource
@@ -259,4 +250,3 @@ subroutine chargei
   enddo
 
 end subroutine chargei
-

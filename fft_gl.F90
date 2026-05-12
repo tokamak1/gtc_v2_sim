@@ -111,8 +111,6 @@ Subroutine c2cfftgl(isign,n,scale,cin,cout)
 end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!Subroutine fft(isign,nn,fdata)
-
 !=======================================================================
 ! Single Precision Complex Fast Fourier Transform
 !
@@ -335,4 +333,3 @@ SUBROUTINE SPCPFT( A, B, C, UIN, UOUT, ISIGN )
   END DO
 
 END SUBROUTINE SPCPFT
-

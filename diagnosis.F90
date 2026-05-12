@@ -15,11 +15,7 @@ subroutine diagnosis
 
   save xnormal
 
-#ifdef __NERSC
-#define FLUSH flush_
-#else
 #define FLUSH flush
-#endif
 
 ! send tracer information to PE=0
 ! Make sure that PE 0 does not send to itself if it already holds the tracer.
@@ -49,8 +45,6 @@ subroutine diagnosis
            open(444,file='sheareb.out',status='replace')
            write(444,101)i
            write(444,101)mpsi
-	  !!! write(*,*)'i=',i
-	!!!   write(*,*)'mpsi=',mpsi
 	
 ! tracer particle energy and angular momentum
 ! S.Ethier 4/15/04  The calculation of "etracer" and "ptracer" is now done
@@ -61,7 +55,6 @@ subroutine diagnosis
            g=1.0
            r=sqrt(2.0*tracer(1))
            q=q0+q1*r/a+q2*r*r/(a*a)
-!           epotential=gyroradius*r*r*(0.5*flow0+flow1*r/(3.0*a)+0.25*flow2*r*r/(a*a))
            epotential=0.0
            etracer=tracer(6)*tracer(6)*b &        
                 +0.5*(tracer(4)*b*qion)**2/aion+epotential
@@ -199,7 +192,6 @@ subroutine diagnosis
      write(ihistory,102)tracer(4)*b*qion/(aion*vthi)
 
 ! energy error
-!     epotential=gyroradius*r*r*(0.5*flow0+flow1*r/(3.0*a)+0.25*flow2*r*r/(a*a))
      epotential=0.0
      write(ihistory,102)(tracer(6)*tracer(6)*b &  
           +0.5*(tracer(4)*b*qion)**2/aion+epotential)/etracer-1.0
@@ -213,7 +205,6 @@ subroutine diagnosis
 
 ! normalization
      fdum(11:15)=max(1.0_wp,fdum(11:15))
-   !!  fdum(1)=fdum(1)/real(numberpe)
    ! At this point, fdum(1)/real(numberpe) is the volume average of phi**2.
    ! Since sqrt(y1)+sqrt(y2) is not equal to sqrt(y1+y2), we need to take
    ! the square root after the MPI_Reduce operation and final volume average.
@@ -239,21 +230,13 @@ subroutine diagnosis
      write(stdout,*)istep+mstepall,fdum(1),eradial,fdum(8),&
                     Total_field_energy(1:3)
      if(stdout /= 6 .and. stdout /= 0)close(stdout)	
-     !call FLUSH(stdout)
 
 ! radial-time 2D data
      write(444,102)phip00(1:mpsi)/vthi
-!!!	write(*,*)'*******phip00***'
-!!        write(*,*)phip00(1:mpsi)/vthi
-!     write(444,102)phi00*tem_inv
 	
      write(444,102)ddum
-!!!     write(*,*)'*******ddum*****'
-!!!     write(*,*)ddum
     
      write(444,102)hfluxpsi(1:mpsi)*gradt*tem_inv/vthi
-!!!  write(*,*)'*******hflux*****'
-!!!     write(*,*)hfluxpsi(1:mpsi)*gradt*tem_inv/vthi
      if(istep==mstep)close(444)
   endif
   call MPI_BARRIER(MPI_COMM_WORLD,merror)

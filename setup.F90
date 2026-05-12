@@ -26,7 +26,6 @@ end module particle_decomp
   use particle_tracking
   implicit none
 
-  logical :: dir_exist
   integer i,j,k,ierror,ij,mid_theta,ip,jt,indp,indt,mtest,micell
   integer mi_local
   real(wp) r0,b0,temperature,tdum,r,q,sint,dtheta_dx,rhoi,b,zdum,&
@@ -35,11 +34,7 @@ end module particle_decomp
   namelist /run_parameters/ numberpe,mi,mgrid,mid_theta,mtdiag,delr,delt,&
        ulength,utime,gyroradius
 
-#ifdef __AIX
-#define FLUSH flush_
-#else
 #define FLUSH flush
-#endif
 
 ! total # of PE and rank of PE
   call mpi_comm_size(mpi_comm_world,numberpe,ierror)
@@ -48,20 +43,8 @@ end module particle_decomp
 ! Read the input file that contains the run parameters
   call read_input_params(micell,r0,b0,temperature,edensity0)
 
-!!XY rolling restart
-!! initialize restart directory and control var
   irest=1
   FileExit=0
-
-!!  inquire(file=restart_dir1,exist=dir_exist)
-!!  if( .not. dir_exist) then
-!!     call system("mkdir "// trim(restart_dir1))
-!!  endif
-
-!!  inquire(file=restart_dir2,exist=dir_exist)
-!!  if( .not. dir_exist) then
-!!     call system("mkdir "// trim(restart_dir2))
-!!  endif
 
 ! numerical constant
   pi=4.0_wp*atan(1.0_wp)
@@ -142,8 +125,6 @@ end module particle_decomp
   if(mi<mod(mi_local,npartdom))mi=mi+1
   mimax=mi+100*ceiling(sqrt(real(mi))) !ions array upper bound
 
-  !write(0,*)'mype=',mype,'   mi=',mi
-
   delr=deltar/gyroradius
   delt=deltat(mpsi/2)*(a0+deltar*real(mpsi/2))/gyroradius
   mid_theta=mtheta(mpsi/2)
@@ -158,7 +139,6 @@ end module particle_decomp
      jtp1(2,mgrid,mzeta),jtp2(2,mgrid,mzeta),wtp1(2,mgrid,mzeta),&
      wtp2(2,mgrid,mzeta),dtemper(mgrid,mzeta),heatflux(mgrid,mzeta),&
      STAT=mtest)
-!!XY initilize
   pgyro=0.0
   tgyro=0.0
   markeri=0.0
@@ -204,7 +184,6 @@ end module particle_decomp
      enddo
      rmax=min(a1,r+0.5*deltar)
      rmin=max(a0,r-0.5*deltar)
-     !!tdum=real(mi)*(rmax*rmax-rmin*rmin)/(a1*a1-a0*a0)
      tdum=real(mi*npartdom)*(rmax*rmax-rmin*rmin)/(a1*a1-a0*a0)
      do j=1,mtheta(i)
         ij=igrid(i)+j
@@ -213,7 +192,6 @@ end module particle_decomp
            markeri(k,ij)=1.0/markeri(k,ij) !to avoid divide operation
         enddo
      enddo
-     !!pmarki(i)=1.0/(real(numberpe)*tdum)
      pmarki(i)=1.0/(real(ntoroidal)*tdum)
      markeri(:,igrid(i))=markeri(:,igrid(i)+mtheta(i))
   enddo
@@ -594,13 +572,9 @@ end subroutine broadcast_input_params
 
   use global_parameters
   use particle_decomp
-!  use particle_array
-!  use field_array
-!  use diagnosis_array
-!  use particle_tracking
   implicit none
 
-  integer  :: i,j,k,pe_number,mtest,ierror
+  integer :: ierror
 
 ! ----- First we verify the consistency of ntoroidal and npartdom -------
 ! The number of toroidal domains (ntoroidal) times the number of particle
@@ -632,41 +606,16 @@ end subroutine broadcast_input_params
 !    particle_domain_location = rank of the particle domain holding mype
 !    toroidal_domain_location = rank of the toroidal domain holding mype
 ! 
-! On the IBM SP, the MPI tasks are distributed in an orderly fashion to each
-! node unless the LoadLeveler instruction "#@ blocking = unlimited" is used.
-! On Seaborg for example, the first 16 tasks (mype=0-15) will be assigned to
-! the first node that has been allocated to the job, then the next 16
-! (mype=16-31) will be assigned to the second node, etc. When not using the
-! OpenMP, we want the particle domains to sit on the same node because
-! communication is more intensive. To achieve this, successive PE numbers are
-! assigned to the particle domains first.
-! It is easy to achieve this ordering by simply using mype/npartdom for
-! the toroidal domain and mod(mype,npartdom) for the particle domain.
-!
-!  pe_number=0
-!  do j=0,ntoroidal-1
-!     do i=0,npartdom-1
-!        pe_grid(i,j)=pe_number
-!        particle_domain_location(pe_number)=i
-!        toroidal_domain_location(pe_number)=j
-!        pe_number=pe_number+1
-!     enddo
-!  enddo
+! Assign successive ranks to particle domains first. This keeps the particle
+! decomposition local within each toroidal domain when possible.
 
   particle_domain_location=mod(mype,npartdom)
   toroidal_domain_location=mype/npartdom
-
-!  write(0,*)'mype=',mype,"  particle_domain_location =",&
-!            particle_domain_location,' toroidal_domain_location =',&
-!            toroidal_domain_location,' pi=',pi
 
 ! Domain decomposition in toroidal direction.
   mzeta=mzetamax/ntoroidal
   zetamin=2.0_wp*pi*real(toroidal_domain_location)/real(ntoroidal)
   zetamax=2.0_wp*pi*real(toroidal_domain_location+1)/real(ntoroidal)
-
-!  write(0,*)mype,' in set_particle_decomp: mzeta=',mzeta,'  zetamin=',&
-!            zetamin,'  zetamax=',zetamax
 
 ! grid spacing in the toroidal direction
   deltaz=(zetamax-zetamin)/real(mzeta)
@@ -692,7 +641,6 @@ end subroutine broadcast_input_params
 ! All the processes passing the same value of "color" will be placed in
 ! the same communicator. The "rank_in_new_comm" value will be used to
 ! set the rank of that process on the communicator.
-!  call MPI_COMM_SPLIT(old_comm,color,rank_in_new_comm,new_comm,ierror)
 
 ! particle domain communicator (for communications between the particle
 ! domains WITHIN the same toroidal domain)
@@ -709,10 +657,6 @@ end subroutine broadcast_input_params
 
   call mpi_comm_size(toroidal_comm,nproc_toroidal,ierror)
   call mpi_comm_rank(toroidal_comm,myrank_toroidal,ierror)
-
-!  write(0,*)'mype=',mype,'  nproc_toroidal=',nproc_toroidal,&
-!       ' myrank_toroidal=',myrank_toroidal,'  nproc_partd=',nproc_partd,&
-!       ' myrank_partd=',myrank_partd
 
   if(nproc_partd/=npartdom)then
     write(0,*)'*** nproc_partd=',nproc_partd,' NOT EQUAL to npartdom=',npartdom

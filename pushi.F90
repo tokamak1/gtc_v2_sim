@@ -176,45 +176,16 @@ subroutine pushi
           paranl*q*(1.0+rip*zion(4,m))*dptdz)*deni 
          
 ! update particle position
-!     if(zion0(1,m) < paxis)then
-! particles close to axis use (x,y) coordinates
-!        pdum=sqrt(zion(1,m))
-!        xdum   = pdum*cost  
-!        ydum   = pdum*sint
-!        pdum=1.0/zion(1,m)
-!        xdot   = 0.5*pdot*xdum*pdum-ydum*tdot
-!        ydot   = 0.5*pdot*ydum*pdum+xdum*tdot
-!        pdum=sqrt(zion0(1,m))
-!        xdum   = pdum*cos(zion0(2,m)) + dtime*xdot
-!        ydum   = pdum*sin(zion0(2,m)) + dtime*ydot
-!        zion(1,m) = max(1.0e-8_wp*psimax,xdum*xdum+ydum*ydum)
-!        zion(2,m) = sign(1.0_wp,ydum)*acos(max(-1.0_wp,min(1.0_wp,xdum/sqrt(zion(1,m)))))
-!     else
      zion(1,m) = max(1.0e-8_wp*psimax,zion0(1,m)+dtime*pdot)
      zion(2,m) = zion0(2,m)+dtime*tdot
-!     endif
 
      zion(3,m) = zion0(3,m)+dtime*zdot
      zion(4,m) = zion0(4,m)+dtime*rdot
      zion(5,m) = zion0(5,m)+dtime*wdot
      
-! theta and zeta normalize to [0,2*pi), modulo is slower than hand coded
-! procedure on Seaborg. However, modulo works better and is preferable.
-!!!     zion(2,m)=zion(2,m)*pi2_inv+10.0 !period of 1
-!!!     zion(2,m)=2.0*pi*(zion(2,m)-aint(zion(2,m))) ![0,2*pi)
-!!!     zion(3,m)=zion(3,m)*pi2_inv+10.0
-!!!     zion(3,m)=2.0*pi*(zion(3,m)-aint(zion(3,m)))
-
+! theta and zeta normalize to [0,2*pi)
      zion(2,m)=modulo(zion(2,m),pi2)
      zion(3,m)=modulo(zion(3,m),pi2)
-
-! UPDATE: 02/10/2006  The modulo function now streams on the X1E
-! 02/20/2004  The modulo function seems to prevent streaming on the X1
-! 02/20/2004 mod() does the same thing as modulo but it streams.
-! 02/23/2004 need to do mod((pi2+zion),pi2) instead of mod(zion,pi2) in order
-!  to catch the negative values of zion.
-!     zion(2,m)=mod((pi2+zion(2,m)),pi2)
-!     zion(3,m)=mod((pi2+zion(3,m)),pi2)
 
 ! store GC information for flux measurements
      wpi(1,m)=vdr
@@ -223,16 +194,6 @@ subroutine pushi
  enddo 
 
  if(irk==2)then
-
-!  ! Avoid runaway particles by limiting absolute value of parallel velocity.
-!    do m=1,mi
-!       r=sqrt(2.0_wp*zion(1,m))
-!       b=1.0_wp/(1.0_wp+r*cos(zion(2,m)))
-!       upara=zion(4,m)*b*cmratio
-!       if(abs(upara) > uright)then
-!          zion(4,m)=sign(1._wp,upara)*uright/(b*cmratio)
-!       endif
-!    enddo
 
 ! out of boundary particle
 !$omp parallel do private(m)

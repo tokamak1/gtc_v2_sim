@@ -209,7 +209,6 @@ subroutine shifti
         mtop=mtop-1
         if (mtop == mi) exit  !Break out of the DO loop
      enddo
-!  endif
 
 ! send # of particle to move right to neighboring PEs of same particle
 ! domain.
@@ -259,30 +258,6 @@ subroutine shifti
   if(mi+mrecvleft(1)+mrecvright(1) > mimax)then
      write(0,*)"need bigger particle array",mimax,mi+mrecvleft(1)+mrecvright(1)
      call MPI_ABORT(MPI_COMM_WORLD,1,ierror)
-! open disk file
-!     if(mype < 10)then
-!        write(cdum,'("TEMP.00",i1)')mype
-!     elseif(mype < 100)then
-!        write(cdum,'("TEMP.0",i2)')mype
-!     else
-!        write(cdum,'("TEMP.",i3)')mype
-!     endif
-!     open(111,file=cdum,status='replace',form='unformatted')
-     
-! record particle information to file
-!     write(111)zion(1:nparam,1:mi)
-!     write(111)zion0(1:nparam,1:mi)
-     
-! make bigger array
-!     deallocate(zion,zion0)
-!     mimax=2*(mi+mrecvleft(1)+mrecvright(1))-mimax
-!     allocate(zion(nparam,mimax),zion0(nparam,mimax))
-     
-! read back particle information
-!     rewind(111)
-!     read(111)zion(1:nparam,1:mi)
-!     read(111)zion0(1:nparam,1:mi)
-!     close(111)
   endif
 
 ! unpack particle, particle moved from left
@@ -306,5 +281,3 @@ subroutine shifti
   goto 100
   
 end subroutine shifti
-
-

@@ -18,13 +18,6 @@ program gtc
   real(doubleprec) tracktcpu,tracktwc,tr0,tr0wc
   character(len=10) ic(8)
 
-#ifdef __NERSC
-! NERSC USG utilization statistics. This routine is available only on the
-! NERSC computers so it is included at the preprocessing stage only if
-! the variable __NERSC is defined (see the Makefile).
-!  call system_stats()
-#endif
-
 ! MPI initialize
   call mpi_init(ierror)
 
@@ -44,20 +37,10 @@ program gtc
 
 ! input parameters, setup equilibrium, allocate memory 
   CALL SETUP
-! initiate adios
-#if ADIOS
- CALL adios_init ("config.xml"//char(0), MPI_COMM_WORLD, MPI_COMM_SELF, MPI_INFO_NULL)
-#endif
 ! initialize particle position and velocity
   CALL LOAD
 ! If particle tracking is "on", tag each particle with a unique number
   if(track_particles == 1 .and. irun==0)call tag_particles
-
-! Write out initial position of tracked particles
-!!!  if(track_particles==1)then
-!!!     call locate_tracked_particles
-!!!     call write_tracked_particles
-!!!  endif
 
   CALL CHARGEI !calculate ion gather-scatter coefficients
   call timer(t0,dt,t0wc,dtwc)
@@ -115,38 +98,20 @@ program gtc
         timewc(4)=timewc(4)+dtwc
 
         if(idiag==0)then
-           !!!if(mype==0)then
-           !!!   if(stdout /= 6 .and. stdout /= 0)open(stdout,file='stdout.out',status='old',position='append')
-           !!!       write(stdout,*)'diagnosis begin'
-           !!   if(stdout /= 6 .and. stdout /= 0)close(stdout)
-          !!! endif
-
            CALL DIAGNOSIS
-        !   call DATAOUT3D
            call timer(tr0,dt,tr0wc,dtwc)
            if(track_particles==1)call locate_tracked_particles
            if(track_particles==1)call write_tracked_particles
            call timer(tr0,dt,tr0wc,dtwc)
            tracktcpu=tracktcpu+dt
            tracktwc=tracktwc+dtwc
-
-        !!!  CALL VOLUME    !Original netCDF 3D potential data
-        !!  CALL OUTPUT3D  !HDF5 parallel output of 3D potential data
-        !!!  CALL DATAOUT   !New version of netCDF 3D potential data
         endif
 
      enddo
 
-!!     call timer(tr0,dt,tr0wc,dtwc)
-     !!!if(track_particles==1)call locate_tracked_particles
-!!     call timer(tr0,dt,tr0wc,dtwc)
-!!     tracktcpu=tracktcpu+dt
-!!     tracktwc=tracktwc+dtwc
-
 ! profile snapshots, write particle information to restart file
      if(mod(istep,mstep/msnap) .eq. 0)then
         CALL SNAPSHOT
-        !!!if(track_particles==1)call write_tracked_particles
      endif
   enddo
 
@@ -176,14 +141,6 @@ program gtc
      if(track_particles==1)write(stdout,'("PARTICLE TRACKING TIME(SEC):",f12.3)')tracktwc
      if(stdout /= 6 .and. stdout /= 0)close(stdout)
   endif
-
-#if ADIOS
-  CALL adios_finalize (mype)
-#endif
-
-#ifdef __NERSC
-!  call system_stats()
-#endif
 
 ! MPI finalize
   call mpi_finalize(ierror)

@@ -17,36 +17,20 @@ subroutine load
 
 ! restart from previous runs
   if(irun /= 0)then
-!!     call restart_read
      if(mype==0)then
-!!get restart directory info
          open(345,file="FileExit.dat",status="old")
          read(345,"(A9,i1)")cdum1,FileExit
          read(345,"(A9,i5)")cdum1,irest
          close(345)         
          irest=irest-1
-
-!! get remaing timestep info
-!!         open(333,file='history.out',status="old")
-!!         do i=1,5
-!!            read(333,101)m
- !!           write(ihistory,101)m
- !!        enddo
- !!        close(333)
-!         print *,'read restart_dir',mod(irest,2)+1
-!         print *,'total mstep=',mstep
-        ! mstep=mstep-m*ndiag
-        ! print *,'mstep for this run=',mstep
      endif
   101 format(i6)
      call mpi_bcast(irest,1,mpi_integer,0,mpi_comm_world,ierr)
      call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-   !  call mpi_bcast(mstep,1,mpi_integer,0,mpi_comm_world,ierr)
      call restart_io("read")
      return
   endif
 
-  !!rmi=1.0/real(mi)
   rmi=1.0/real(mi*npartdom)
   pi2_inv=0.5/pi
   delr=1.0/deltar
@@ -56,18 +40,13 @@ subroutine load
   if(track_particles < -10 .and. track_particles > -20)w_initial=0.1_wp*real(-10-track_particles,wp)
   if(mype==0)write(*,*)'w_initial =',w_initial
   ntracer=0
-  !if(mype==0)ntracer=mi
   if(mype==0)ntracer=1
       
 ! radial: uniformly distributed in r^2, later transform to psi
 !$omp parallel do private(m)
   do m=1,mi
-     !!zion(1,m)=sqrt(a0*a0+(real(m)-0.5)*(a1*a1-a0*a0)*rmi)
      zion(1,m)=sqrt(a0*a0+(real((m-1)*npartdom+myrank_partd+1)-0.5)*(a1*a1-a0*a0)*rmi)
   enddo
-
-! If particle tracking is "on", tag each particle with a unique number
-!  if(track_particles == 1)call tag_particles
 
 ! Set zion(2:6,1:mi) to uniformly distributed random values between 0 and 1
   call set_random_zion
@@ -135,7 +114,6 @@ subroutine load
      zion(4,ntracer)=0.5*vthi*aion/qion
      zion(5,ntracer)=0.0
      zion(6,ntracer)=sqrt(aion*vthi*vthi)
-!     zion0(1:5,ntracer)=zion(1:5,ntracer)
   endif
 
 ! Special case to test a "full-F"-like simulation. We set the weight of
@@ -169,12 +147,5 @@ subroutine load
      enddo
   endif
 
-!  write(mype+40,'(6e15.6)')zion(1:6,1:mi)
-!  do m=1,mi
-!     write(mype+40,*)zion(:,m)
-!  enddo
-!  close(mype+40)
-
 end subroutine load
-
 

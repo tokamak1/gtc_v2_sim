@@ -1,5 +1,4 @@
 module precision
-  !!use mpi
   include 'mpif.h'
   integer, parameter :: doubleprec=selected_real_kind(12),&
        singleprec=selected_real_kind(6),&
@@ -26,32 +25,10 @@ module global_parameters
        zetamin,umax,tite,rc,rw,qion,aion
   integer,dimension(:),allocatable :: mtheta
   real(wp),dimension(:),allocatable :: deltat
-!!XY rolling restart
   integer :: irest,FileExit
   character(len=10):: restart_dir1,restart_dir2
 
-#ifdef _SX
-! SX-6 trick to minimize bank conflict in chargei
-  integer,dimension(0:maxmpsi) :: mmtheta
-!cdir duplicate(mmtheta,1024)
-#endif
-
 end module global_parameters
-
-module comm_parameters
-  integer, dimension(:),allocatable::io_size,io_list
-  integer ::color,key,residual,intbuf(2)
-  integer ::io_comm,sub_comm,sub_rank,io_group,w_group,worker_group,worker_comm
-end module comm_parameters
-
-module data_type
-  integer, parameter :: bp_char=0,bp_short=1,&
-                bp_int=2,bp_long=3,bp_longlong=4,bp_float=5,&
-                bp_double=6,bp_longdouble=7,bp_pointer=8,&
-                bp_string=9,bp_uchar=50,bp_ushort=51,bp_uint=52,&
-                bp_ulong=53,bp_ulonglong=54
-end module data_type
-
 
 module particle_array
   use precision
@@ -81,14 +58,6 @@ module field_array
        pgyro,tgyro,dtemper,heatflux,phit
   real(wp),dimension(:,:,:),allocatable :: evector,wtp1,wtp2
   real(wp) :: Total_field_energy(3)
-
-#ifdef _SX
-! SX-6 trick to minimize bank conflicts in chargei
-!cdir duplicate(iigrid,1024)
-  integer,dimension(0:mmpsi) :: iigrid
-!cdir duplicate(qqtinv,1024)
-  real(wp),dimension(0:mmpsi) :: qqtinv
-#endif
 
 end module field_array
 
