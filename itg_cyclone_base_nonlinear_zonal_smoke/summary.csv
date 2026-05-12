@@ -1,0 +1,13 @@
+case,cyclone_base_nonlinear_electrostatic_zonal
+mpi_np,10
+mstep,10
+msnap,1
+ndiag,5
+time_real_sec,1.51
+time_user_sec,11.61
+time_sys_sec,1.32
+main_loop_wall_sec,1.377
+program_wall_sec,1.458
+snapshot_count,1
+restart_file_count,10
+restart_files_retained,0

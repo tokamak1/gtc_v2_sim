@@ -1,0 +1,19 @@
+# Build products
+*.o
+*.mod
+gtc
+gtcmpi
+gtc_build_test
+
+# Runtime case outputs. Keep the committed smoke case as a compact reference.
+itg_run_*/
+itg_cyclone_base_nonlinear_zonal/
+restart_dir*/
+OVERFLOW_restart_dir*/
+phi_dir/
+trackp_dir/
+.matplotlib/
+
+# Local/editor noise
+.DS_Store
+*.log.tmp

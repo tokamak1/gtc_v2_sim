@@ -1,0 +1,34 @@
+# gtc_v2_sim
+
+Minimal GTC v2 case folder for running the ITG Cyclone base case as a
+nonlinear electrostatic ion-temperature-gradient calculation with the zonal
+mode enabled (`mode00=1`).
+
+Build:
+
+```sh
+make
+```
+
+Run the default short nonlinear case:
+
+```sh
+./run_itg_cyclone_base_nonlinear_zonal.sh
+```
+
+Useful runtime overrides:
+
+```sh
+MPI_NP=10 MSTEP=1000 MSNAP=10 CASE_DIR=itg_run_1000 ./run_itg_cyclone_base_nonlinear_zonal.sh
+```
+
+Set `KEEP_RESTART=1` if you want to retain restart files. They are removed by
+default to keep the case folder small.
+
+Main outputs in the case directory:
+
+- `history.out`: scalar and mode-amplitude history
+- `sheareb.out`: zonal-flow/shearing diagnostics
+- `snap*.out`: profile and field snapshots
+- `summary.csv`: quick run summary
+- `plots/`: generated figures when Python plotting dependencies are present

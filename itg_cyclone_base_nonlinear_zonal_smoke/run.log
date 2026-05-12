@@ -1,0 +1,93 @@
+ Program starts at DATE=20260511  TIME=175650.452
+&INPUT_PARAMETERS
+ IRUN=0          ,
+ MSTEP=10         ,
+ MSNAP=1          ,
+ NDIAG=5          ,
+ NONLINEAR=  1.00000000    ,
+ PARANL=  0.00000000    ,
+ MODE00=1          ,
+ TSTEP= 0.200000003    ,
+ MICELL=20         ,
+ MPSI=50         ,
+ MTHETAMAX=300        ,
+ MZETAMAX=10         ,
+ NPARTDOM=1          ,
+ A= 0.358000010    ,
+ A0=  3.58000025E-02,
+ A1= 0.322200000    ,
+ Q0= 0.580999970    ,
+ Q1=  1.09200001    ,
+ Q2=  1.09200001    ,
+ RC= 0.500000000    ,
+ RW= 0.400000006    ,
+ AION=  1.00000000    ,
+ QION=  1.00000000    ,
+ KAPPATI=  6.90000010    ,
+ KAPPATE=  6.90000010    ,
+ KAPPAN=  2.20000005    ,
+ TITE=  1.00000000    ,
+ FLOW0=  0.00000000    ,
+ FLOW1=  0.00000000    ,
+ FLOW2=  0.00000000    ,
+ R0=  93.1999969    ,
+ B0=  19100.0000    ,
+ TEMPERATURE=  2500.00000    ,
+ EDENSITY0=  1.45999998E+14,
+ STDOUT=6          ,
+ NBOUND=10         ,
+ UMAX=  4.00000000    ,
+ ILOAD=0          ,
+ TRACK_PARTICLES=0          ,
+ NPTRACK=0          ,
+ RNG_CONTROL=0          ,
+ NMODE= 13*20         ,
+ MMODE=25         ,26         ,27         ,28         ,29         ,
+ 30         ,31         ,32         ,33         ,34         ,35         ,
+ 36         ,37         ,
+ /
+
+===================================
+  Run without OpenMP threads
+===================================
+
+ *******************************************************
+   Using npartdom=           1  and ntoroidal=          10
+ *******************************************************
+
+&RUN_PARAMETERS
+ NUMBERPE=10         ,
+ MI=306020     ,
+ MGRID=15351      ,
+ MID_THETA=300        ,
+ MTDIAG=300        ,
+ DELR=  1.99931896    ,
+ DELT=  1.30855131    ,
+ ULENGTH=  93.1999969    ,
+ UTIME=  5.46513768E-09,
+ GYRORADIUS=  2.86497548E-03,
+ /
+ random_seed=           8  1330617544   243915101  1215717476   609615272  -897220893  -977263424 -1716493737   749333318
+ w_initial =   1.00000005E-03
+ poisson solver=          39           0   1.00000036       0.00000000           15351      430027
+ etracer =   7.70002043E-06
+ kappa_T at radial_bin=           1   2.53836632    
+ kappa_T at radial_bin=           2   6.79302549    
+ kappa_T at radial_bin=           3   6.90000010    
+ kappa_T at radial_bin=           4   6.79302597    
+ kappa_T at radial_bin=           5   2.53836823    
+           5   1.35894397E-05   1.72808486E-05  -4.81710115E-12   5.03805436E-17   4.90093052E-16   4.39817173E-16
+          10   1.45083995E-05   1.50961932E-05   8.26570978E-10   5.05950646E-17   3.88388270E-16   3.37892136E-16
+ written restart_dir2/restart_00000.bp
+ written restart_dir2/history_restart.out
+ Program ends at DATE=20260511   TIME=175651.910 
+ CPU TIME USAGE (in SEC):
+ pusher    shift     charge    poisson   smooth    field     load      total     
+ 5.368E-01 7.624E-02 3.821E-01 7.213E-02 9.718E-02 2.634E-02 5.288E-02 1.279E+00
+
+ WALL CLOCK TIMES (in SEC):
+ pusher    shift     charge    poisson   smooth    field     load      total     
+ 5.804E-01 8.105E-02 4.173E-01 8.849E-02 1.061E-01 2.865E-02 8.133E-02 1.458E+00
+MAIN LOOP TIME(SEC):       1.377
+TOTAL CPU TIME USAGE (SEC):       1.279
+TOTAL WALL CLOCK TIME(SEC):       1.458
