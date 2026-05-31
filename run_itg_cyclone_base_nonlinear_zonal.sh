@@ -99,7 +99,7 @@ else
 fi
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 "$root/plot_history_and_snapshots.py" "$case_dir" > plot.log 2>&1 || true
+  python3 "$root/gtc_plot.py" case --case-dir "$case_dir" --out-dir "$case_dir/plots" > plot.log 2>&1 || true
 fi
 
 echo "case output: $case_dir"

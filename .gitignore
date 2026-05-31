@@ -4,10 +4,19 @@
 gtc
 gtcmpi
 gtc_build_test
+gtc_c*
+gtc_fortran_ref
+gtc_local_num_mode*
+build_num_mode*/
 
 # Runtime case outputs. Keep the committed smoke case as a compact reference.
 itg_run_*/
 itg_cyclone_base_nonlinear_zonal/
+itg_c_nonlinear_zonal_*/
+bench_*/
+compare_*_physical_scalars/
+science281_mini_*_compare/
+remote_results/
 restart_dir*/
 OVERFLOW_restart_dir*/
 phi_dir/
@@ -17,3 +26,4 @@ trackp_dir/
 # Local/editor noise
 .DS_Store
 *.log.tmp
+~$*
