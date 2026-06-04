@@ -1,18 +1,21 @@
 FC = mpif90
+comma := ,
 FFLAGS ?= -O2 -cpp -ffree-form
 TARGET ?= gtc_local_num_mode13
 MPICC ?= mpicc
 MPICXX ?= mpicxx
-MPI_CC_BACKEND ?= clang
-MPI_CXX_BACKEND ?= clang++
+LLVM_PREFIX ?= $(if $(wildcard /opt/anaconda3/bin/clang),/opt/anaconda3,)
+MPI_CC_BACKEND ?= $(if $(LLVM_PREFIX),$(LLVM_PREFIX)/bin/clang,clang)
+MPI_CXX_BACKEND ?= $(if $(wildcard $(LLVM_PREFIX)/bin/clang++),$(LLVM_PREFIX)/bin/clang++,$(if $(wildcard $(LLVM_PREFIX)/bin/clang++-20),$(LLVM_PREFIX)/bin/clang++-20,clang++))
 GTC_CFLAGS ?= -O3 -march=native -std=c11 -Wall -Wextra
 GTC_CXXFLAGS ?= -O3 -march=native -std=c++17 -Wall -Wextra
 GTC_CLIBS ?=
 C_TARGET ?= gtc_c
 POCKETFFT ?= 1
 OPENMP ?= 1
-GTC_OMPFLAGS ?= -fopenmp
-GTC_OMPLIBS ?= -lomp
+OPENMP_PREFIX ?= $(LLVM_PREFIX)
+GTC_OMPFLAGS ?= -fopenmp $(if $(wildcard $(OPENMP_PREFIX)/include/omp.h),-I$(OPENMP_PREFIX)/include,)
+GTC_OMPLIBS ?= $(if $(wildcard $(OPENMP_PREFIX)/lib/libomp.dylib),-L$(OPENMP_PREFIX)/lib -lomp -Wl$(comma)-rpath$(comma)$(OPENMP_PREFIX)/lib,-lomp)
 
 ifeq ($(OPENMP),1)
 GTC_CFLAGS += $(GTC_OMPFLAGS) -DGTC_USE_OPENMP

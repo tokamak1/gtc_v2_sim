@@ -9,6 +9,10 @@
 
 #ifdef GTC_USE_POCKETFFT
 extern int gtc_pocketfft_c2c(int isign, int n, GtcReal scale, GtcReal *x);
+extern int gtc_pocketfft_r2c(int n, int count, GtcReal scale, const GtcReal *x,
+                             GtcReal *y, int requested_threads);
+extern int gtc_pocketfft_c2r(int n, int count, GtcReal scale, const GtcReal *y,
+                             GtcReal *x, int requested_threads);
 #endif
 
 static size_t cidx(int index) {
@@ -88,6 +92,17 @@ static void fft_complex_transform(int isign, int n, GtcReal scale, const GtcReal
   free(work);
 }
 
+static int fft_batch_threads(int count) {
+#ifdef GTC_USE_OPENMP
+  if (omp_in_parallel()) return 1;
+  const int threads = omp_get_max_threads();
+  return count < threads ? count : threads;
+#else
+  (void)count;
+  return 1;
+#endif
+}
+
 #ifdef GTC_USE_ACCELERATE
 static int fft_accelerate(int isign, int n, const GtcReal *in, GtcReal *out) {
   static int setup_n = 0;
@@ -148,6 +163,9 @@ static int fft_accelerate(int isign, int n, const GtcReal *in, GtcReal *out) {
 
 void fftc1d(int isign, int irank, GtcReal scale, GtcReal *x) {
   const int n = irank;
+#ifdef GTC_USE_POCKETFFT
+  if (n >= 128 && gtc_pocketfft_c2c(isign, n, scale, x)) return;
+#endif
   GtcReal *tmp = calloc((size_t)2 * (size_t)n, sizeof(GtcReal));
   if (!tmp) return;
 #ifdef GTC_USE_ACCELERATE
@@ -163,6 +181,14 @@ void fftc1d(int isign, int irank, GtcReal scale, GtcReal *x) {
 void fftr1d(int isign, int irank, GtcReal scale, GtcReal *x, GtcReal *y, int icount) {
   const int n = irank;
   const int nc = n / 2 + 1;
+  if (n <= 0 || icount <= 0) return;
+#ifdef GTC_USE_POCKETFFT
+  if (n >= 128) {
+    const int threads = fft_batch_threads(icount);
+    if (isign == 1 && gtc_pocketfft_r2c(n, icount, scale, x, y, threads)) return;
+    if (isign == -1 && gtc_pocketfft_c2r(n, icount, scale, y, x, threads)) return;
+  }
+#endif
   GtcReal *tmp = calloc((size_t)2 * (size_t)n, sizeof(GtcReal));
   GtcReal *out = calloc((size_t)2 * (size_t)n, sizeof(GtcReal));
   if (!tmp || !out) {

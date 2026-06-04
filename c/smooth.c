@@ -9,6 +9,10 @@ static size_t phiflux_index(int mtdiag, int mz, int ri, int j, int k) {
   return (((size_t)ri * (size_t)mtdiag + (size_t)j) * (size_t)mz) + (size_t)k;
 }
 
+static size_t spectrum_line_index(int nr, int jj, int ri) {
+  return (size_t)jj * (size_t)nr + (size_t)ri;
+}
+
 static int spectrum_filter_enabled(const GtcState *s) {
   return s->p.spectrum_mode == GTC_SPECTRUM_SINGLE_N;
 }
@@ -39,8 +43,11 @@ static void apply_spectrum_control(GtcState *s, int record_history_modes, int re
   GtcReal *eachzeta = gtc_xcalloc(s, each_count, sizeof(*eachzeta), "smooth eachzeta");
   GtcReal *allzeta = gtc_xcalloc(s, each_count * (size_t)s->ntoroidal, sizeof(*allzeta), "smooth allzeta");
   const int nc = mzg / 2 + 1;
-  GtcReal *xz = gtc_xcalloc(s, (size_t)mzg, sizeof(*xz), "smooth linear xz");
-  GtcReal *yz = gtc_xcalloc(s, (size_t)2 * (size_t)nc, sizeof(*yz), "smooth linear yz");
+  const int line_count = meachtheta * nr;
+  GtcReal *fft_x = gtc_xcalloc(s, (size_t)line_count * (size_t)mzg,
+                               sizeof(*fft_x), "smooth linear fft x");
+  GtcReal *fft_y = gtc_xcalloc(s, (size_t)line_count * (size_t)2 * (size_t)nc,
+                               sizeof(*fft_y), "smooth linear fft y");
   const int mode_count = meachtheta * s->p.num_mode;
   GtcReal *y_eigen = NULL;
   GtcReal *yt = NULL;
@@ -117,52 +124,72 @@ GTC_OMP_PARALLEL_FOR_STATIC
                allzeta, (int)each_count, GTC_MPI_REAL, jpe, s->toroidal_comm);
   }
 
-  for (int jj = 0; jj < meachtheta; jj++) {
-    const size_t indt1 = (size_t)jj * (size_t)mz;
-    for (int ri = 0; ri < nr; ri++) {
-      const size_t indt = indt1 + (size_t)ri * (size_t)meachtheta * (size_t)mz;
+GTC_OMP_PARALLEL_FOR_STATIC
+  for (int line = 0; line < line_count; line++) {
+    const int jj = line / nr;
+    const int ri = line - jj * nr;
+    const size_t indt = (size_t)jj * (size_t)mz +
+                        (size_t)ri * (size_t)meachtheta * (size_t)mz;
+    GtcReal *xz = fft_x + (size_t)line * (size_t)mzg;
+    for (int pe = 0; pe < s->ntoroidal; pe++) {
+      const size_t pe_base = (size_t)pe * each_count;
+      for (int k = 0; k < mz; k++) {
+        xz[pe * mz + k] = allzeta[pe_base + indt + (size_t)k];
+      }
+    }
+  }
+
+  fftr1d(1, mzg, 1.0, fft_x, fft_y, line_count);
+
+GTC_OMP_PARALLEL_FOR_STATIC
+  for (int line = 0; line < line_count; line++) {
+    const int jj = line / nr;
+    const int ri = line - jj * nr;
+    GtcReal *yz = fft_y + (size_t)2 * spectrum_line_index(nr, jj, ri) * (size_t)nc;
+    if (record_history_modes && (ri + diag1) == s->p.mpsi / 2) {
+      for (int mode = 0; mode < s->p.num_mode; mode++) {
+        const int n = s->p.nmode[mode];
+        if (n >= 0 && n < nc) {
+          const size_t idx = (size_t)mode * (size_t)meachtheta + (size_t)jj;
+          y_eigen[2 * idx] = gtc_real(yz[2 * n]);
+          y_eigen[2 * idx + 1] = gtc_real(yz[2 * n + 1]);
+        }
+      }
+    }
+    if (record_eigenmode) {
+      for (int mode = 0; mode < s->p.num_mode; mode++) {
+        const int n = s->p.nmode[mode];
+        if (n >= 0 && n < nc) {
+          const size_t idx = (((size_t)ri * (size_t)s->p.num_mode + (size_t)mode) *
+                              (size_t)meachtheta) + (size_t)jj;
+          mode_theta[2 * idx] = gtc_real(yz[2 * n]);
+          mode_theta[2 * idx + 1] = gtc_real(yz[2 * n + 1]);
+        }
+      }
+    }
+    if (filter_modes) {
+      for (int mode = 0; mode < nc; mode++) {
+        if (!keep_mode[mode]) {
+          yz[2 * mode] = 0.0;
+          yz[2 * mode + 1] = 0.0;
+        }
+      }
+    }
+  }
+
+  if (filter_modes) {
+    fftr1d(-1, mzg, 1.0, fft_x, fft_y, line_count);
+GTC_OMP_PARALLEL_FOR_STATIC
+    for (int line = 0; line < line_count; line++) {
+      const int jj = line / nr;
+      const int ri = line - jj * nr;
+      const size_t indt = (size_t)jj * (size_t)mz +
+                          (size_t)ri * (size_t)meachtheta * (size_t)mz;
+      const GtcReal *xz = fft_x + (size_t)line * (size_t)mzg;
       for (int pe = 0; pe < s->ntoroidal; pe++) {
         const size_t pe_base = (size_t)pe * each_count;
         for (int k = 0; k < mz; k++) {
-          xz[pe * mz + k] = allzeta[pe_base + indt + (size_t)k];
-        }
-      }
-      memset(yz, 0, (size_t)2 * (size_t)nc * sizeof(*yz));
-      fftr1d(1, mzg, 1.0, xz, yz, 1);
-      if (record_history_modes && (ri + diag1) == s->p.mpsi / 2) {
-        for (int mode = 0; mode < s->p.num_mode; mode++) {
-          const int n = s->p.nmode[mode];
-          if (n >= 0 && n < nc) {
-            const size_t idx = (size_t)mode * (size_t)meachtheta + (size_t)jj;
-            y_eigen[2 * idx] = gtc_real(yz[2 * n]);
-            y_eigen[2 * idx + 1] = gtc_real(yz[2 * n + 1]);
-          }
-        }
-      }
-      if (record_eigenmode) {
-        for (int mode = 0; mode < s->p.num_mode; mode++) {
-          const int n = s->p.nmode[mode];
-          if (n >= 0 && n < nc) {
-            const size_t idx = (((size_t)ri * (size_t)s->p.num_mode + (size_t)mode) *
-                                (size_t)meachtheta) + (size_t)jj;
-            mode_theta[2 * idx] = gtc_real(yz[2 * n]);
-            mode_theta[2 * idx + 1] = gtc_real(yz[2 * n + 1]);
-          }
-        }
-      }
-      if (filter_modes) {
-        for (int mode = 0; mode < nc; mode++) {
-          if (!keep_mode[mode]) {
-            yz[2 * mode] = 0.0;
-            yz[2 * mode + 1] = 0.0;
-          }
-        }
-        fftr1d(-1, mzg, 1.0, xz, yz, 1);
-        for (int pe = 0; pe < s->ntoroidal; pe++) {
-          const size_t pe_base = (size_t)pe * each_count;
-          for (int k = 0; k < mz; k++) {
-            allzeta[pe_base + indt + (size_t)k] = gtc_real(xz[pe * mz + k]);
-          }
+          allzeta[pe_base + indt + (size_t)k] = gtc_real(xz[pe * mz + k]);
         }
       }
     }
@@ -304,8 +331,8 @@ GTC_OMP_PARALLEL_FOR_STATIC
   free(yt);
   free(y_eigen);
   free(keep_mode);
-  free(yz);
-  free(xz);
+  free(fft_y);
+  free(fft_x);
   free(allzeta);
   free(eachzeta);
   free(phiflux);
