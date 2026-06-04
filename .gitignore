@@ -5,21 +5,32 @@ gtc
 gtcmpi
 gtc_build_test
 gtc_c*
-gtc_fortran_ref
+gtc_fortran*
 gtc_local_num_mode*
 build_num_mode*/
 
 # Runtime case outputs
+gtc.input
 itg_run_*/
-itg_cyclone_base_c/
+itg_*/
 bench_*/
-compare_*_physical_scalars/
+compare_*/
 science281_mini_*_compare/
 remote_results/
 restart_dir*/
 OVERFLOW_restart_dir*/
 phi_dir/
 trackp_dir/
+plots/
+FileExit.dat
+ddeni.dat
+history.out
+sheareb.out
+snap*.out
+summary.csv
+run.log
+time.log
+plot.log
 .matplotlib/
 
 # Local/editor noise

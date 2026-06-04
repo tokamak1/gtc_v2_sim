@@ -33,6 +33,10 @@ directories remain self-describing.
 No standalone `gtc.input` is tracked in the repository; the script writes it
 inside each run directory.
 
+The repository tracks source files, `run_itg_cyclone_base_c.sh`, and the
+generic plotting script `gtc_plot.py`. Build products and run outputs are
+ignored so they stay only in local storage on this machine.
+
 The C executable treats `gtc.input` as the source of truth for case
 parameters. Required scalar inputs such as grid sizes, marker count, safety
 factor coefficients, profile controls, boundary width, and density must be
