@@ -1,26 +1,12 @@
 # gtc_v2_sim
 
-Minimal GTC v2 case folder for running the ITG Cyclone base case as a
-nonlinear electrostatic ion-temperature-gradient calculation with the zonal
-mode enabled (`mode00=1`).
+Minimal GTC v2 case folder with a generic C/OpenMP runner for Cyclone-base
+ITG cases.
 
 Build:
 
 ```sh
-make
 make c
-```
-
-Run the default short nonlinear case:
-
-```sh
-./run_itg_cyclone_base_nonlinear_zonal.sh
-```
-
-Useful runtime overrides:
-
-```sh
-MPI_NP=10 MSTEP=1000 MSNAP=10 CASE_DIR=itg_run_1000 ./run_itg_cyclone_base_nonlinear_zonal.sh
 ```
 
 C/OpenMP runtime:
@@ -43,6 +29,9 @@ selected-mode runs (`nonlinear<0.5` and `spectrum_mode=1`), where the history
 diagnostics need paired `(n,m)` modes.
 The generated `gtc.input` includes comments for each parameter so case
 directories remain self-describing.
+
+No standalone `gtc.input` is tracked in the repository; the script writes it
+inside each run directory.
 
 The C executable treats `gtc.input` as the source of truth for case
 parameters. Required scalar inputs such as grid sizes, marker count, safety

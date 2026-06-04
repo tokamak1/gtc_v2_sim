@@ -9,10 +9,9 @@ gtc_fortran_ref
 gtc_local_num_mode*
 build_num_mode*/
 
-# Runtime case outputs. Keep the committed smoke case as a compact reference.
+# Runtime case outputs
 itg_run_*/
-itg_cyclone_base_nonlinear_zonal/
-itg_c_nonlinear_zonal_*/
+itg_cyclone_base_c/
 bench_*/
 compare_*_physical_scalars/
 science281_mini_*_compare/
