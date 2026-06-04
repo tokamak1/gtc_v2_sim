@@ -35,9 +35,10 @@ MPI/OpenMP split, edit those two assignments at the top of
 `run_itg_cyclone_base_nonlinear_zonal_c.sh`. Choose an `MPI_NP` that divides
 `MZETAMAX` when you want an exact toroidal decomposition.
 
-For C runs, nonlinear full-n cases write only `nmode` mode selections. `mmode`
-is written only for linear selected-mode runs (`NONLINEAR<0.5` and
-`SPECTRUM_MODE=1`), where the history diagnostics need paired `(n,m)` modes.
+For C runs, `NMODE_LIST` and `MMODE_LIST` default to empty. Set `NMODE_LIST`
+when `SPECTRUM_MODE=1`; set both `NMODE_LIST` and `MMODE_LIST` for linear
+selected-mode runs (`NONLINEAR<0.5` and `SPECTRUM_MODE=1`), where the history
+diagnostics need paired `(n,m)` modes.
 The generated `gtc.input` includes comments for each parameter so case
 directories remain self-describing.
 
