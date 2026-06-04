@@ -6,40 +6,81 @@
 #include <string.h>
 #include <time.h>
 
-static void defaults(GtcParameters *p) {
+enum {
+  INPUT_IRUN = 0,
+  INPUT_MSTEP,
+  INPUT_MSNAP,
+  INPUT_NDIAG,
+  INPUT_NONLINEAR,
+  INPUT_PARANL,
+  INPUT_MODE00,
+  INPUT_TSTEP,
+  INPUT_MICELL,
+  INPUT_MPSI,
+  INPUT_MTHETAMAX,
+  INPUT_MZETAMAX,
+  INPUT_NPARTDOM,
+  INPUT_A,
+  INPUT_A0,
+  INPUT_A1,
+  INPUT_Q0,
+  INPUT_Q1,
+  INPUT_Q2,
+  INPUT_RC,
+  INPUT_RW,
+  INPUT_AION,
+  INPUT_QION,
+  INPUT_KAPPATI,
+  INPUT_KAPPATE,
+  INPUT_KAPPAN,
+  INPUT_TITE,
+  INPUT_FLOW0,
+  INPUT_FLOW1,
+  INPUT_FLOW2,
+  INPUT_R0,
+  INPUT_B0,
+  INPUT_TEMPERATURE,
+  INPUT_EDENSITY0,
+  INPUT_STDOUT,
+  INPUT_NBOUND,
+  INPUT_UMAX,
+  INPUT_ILOAD,
+  INPUT_RNG_CONTROL,
+  INPUT_SPECTRUM_MODE,
+  INPUT_NMODE,
+  INPUT_MMODE,
+  INPUT_COUNT
+};
+
+static const char *const input_names[INPUT_COUNT] = {
+    "irun",       "mstep",    "msnap",       "ndiag",     "nonlinear", "paranl",
+    "mode00",     "tstep",    "micell",      "mpsi",      "mthetamax", "mzetamax",
+    "npartdom",   "a",        "a0",          "a1",        "q0",        "q1",
+    "q2",         "rc",       "rw",          "aion",      "qion",      "kappati",
+    "kappate",    "kappan",   "tite",        "flow0",     "flow1",     "flow2",
+    "r0",         "b0",       "temperature", "edensity0", "stdout",    "nbound",
+    "umax",       "iload",    "rng_control", "spectrum_mode", "nmode", "mmode"};
+
+#define INPUT_BIT(name) (1ull << (INPUT_##name))
+
+static const unsigned long long required_input_mask =
+    INPUT_BIT(IRUN) | INPUT_BIT(MSTEP) | INPUT_BIT(MSNAP) | INPUT_BIT(NDIAG) |
+    INPUT_BIT(NONLINEAR) | INPUT_BIT(PARANL) | INPUT_BIT(MODE00) | INPUT_BIT(TSTEP) |
+    INPUT_BIT(MICELL) | INPUT_BIT(MPSI) | INPUT_BIT(MTHETAMAX) | INPUT_BIT(MZETAMAX) |
+    INPUT_BIT(NPARTDOM) | INPUT_BIT(A) | INPUT_BIT(A0) | INPUT_BIT(A1) |
+    INPUT_BIT(Q0) | INPUT_BIT(Q1) | INPUT_BIT(Q2) | INPUT_BIT(RC) | INPUT_BIT(RW) |
+    INPUT_BIT(AION) | INPUT_BIT(QION) | INPUT_BIT(KAPPATI) | INPUT_BIT(KAPPATE) |
+    INPUT_BIT(KAPPAN) | INPUT_BIT(TITE) | INPUT_BIT(FLOW0) | INPUT_BIT(FLOW1) |
+    INPUT_BIT(FLOW2) | INPUT_BIT(R0) | INPUT_BIT(B0) | INPUT_BIT(TEMPERATURE) |
+    INPUT_BIT(EDENSITY0) | INPUT_BIT(STDOUT) | INPUT_BIT(NBOUND) | INPUT_BIT(UMAX) |
+    INPUT_BIT(ILOAD) | INPUT_BIT(RNG_CONTROL) | INPUT_BIT(SPECTRUM_MODE);
+
+static void initialize_parameters(GtcParameters *p) {
   memset(p, 0, sizeof(*p));
-  p->mstep = 1500;
-  p->msnap = 1;
-  p->ndiag = 4;
-  p->nonlinear = 1.0;
-  p->mode00 = 1;
-  p->tstep = 0.2;
-  p->micell = 2;
-  p->mpsi = 90;
-  p->mthetamax = 640;
-  p->mzetamax = 64;
-  p->npartdom = 1;
-  p->a = 0.358;
-  p->a0 = 0.1;
-  p->a1 = 0.9;
-  p->q0 = 0.854;
-  p->q2 = 2.184;
-  p->rc = 0.5;
-  p->rw = 0.35;
-  p->aion = 1.0;
-  p->qion = 1.0;
-  p->kappati = 6.9;
-  p->kappate = 6.9;
-  p->kappan = 6.9 * 0.319;
-  p->tite = 1.0;
-  p->r0 = 93.4;
-  p->b0 = 19100.0;
-  p->temperature = 2500.0;
-  p->edensity0 = 0.46e14;
-  p->nbound = 4;
-  p->umax = 4.0;
-  p->rng_control = 1;
-  p->spectrum_mode = GTC_SPECTRUM_FULL_N;
+}
+
+static void mark_input(unsigned long long *seen, int input_id) {
+  if (seen && input_id >= 0 && input_id < INPUT_COUNT) *seen |= 1ull << input_id;
 }
 
 static char *skip_space(char *p) {
@@ -100,13 +141,16 @@ static int parse_int_list(char *value, int **dest) {
   return count;
 }
 
-static void assign_values(GtcParameters *p, const char *key, char *value, int *num_mmode) {
+static void assign_values(GtcParameters *p, const char *key, char *value, int *num_mmode,
+                          unsigned long long *seen) {
   if (strcmp(key, "nmode") == 0) {
     p->num_mode = parse_int_list(value, &p->nmode);
+    if (p->num_mode > 0) mark_input(seen, INPUT_NMODE);
     return;
   }
   if (strcmp(key, "mmode") == 0) {
     *num_mmode = parse_int_list(value, &p->mmode);
+    if (*num_mmode > 0) mark_input(seen, INPUT_MMODE);
     return;
   }
 
@@ -129,6 +173,7 @@ static void assign_values(GtcParameters *p, const char *key, char *value, int *n
       int mode = 0;
       if (spectrum_mode_from_token(token, &mode)) {
         p->spectrum_mode = mode;
+        mark_input(seen, INPUT_SPECTRUM_MODE);
         return;
       }
     }
@@ -140,45 +185,88 @@ static void assign_values(GtcParameters *p, const char *key, char *value, int *n
     cursor += n;
   }
 
-#define SETI(name)         \
+#define SETI(name, flag)   \
   if (strcmp(key, #name) == 0 && ni > 0) { \
     p->name = ints[0];     \
+    mark_input(seen, flag); \
     return;                \
   }
-#define SETR(name)         \
+#define SETR(name, flag)   \
   if (strcmp(key, #name) == 0 && nr > 0) { \
     p->name = reals[0];    \
+    mark_input(seen, flag); \
     return;                \
   }
-  SETI(irun) SETI(mstep) SETI(msnap) SETI(ndiag) SETI(mode00) SETI(micell)
-  SETI(mpsi) SETI(mthetamax) SETI(mzetamax) SETI(npartdom) SETI(nbound)
-  SETI(iload) SETI(rng_control) SETI(spectrum_mode)
+  SETI(irun, INPUT_IRUN) SETI(mstep, INPUT_MSTEP) SETI(msnap, INPUT_MSNAP)
+  SETI(ndiag, INPUT_NDIAG) SETI(mode00, INPUT_MODE00) SETI(micell, INPUT_MICELL)
+  SETI(mpsi, INPUT_MPSI) SETI(mthetamax, INPUT_MTHETAMAX)
+  SETI(mzetamax, INPUT_MZETAMAX) SETI(npartdom, INPUT_NPARTDOM)
+  SETI(nbound, INPUT_NBOUND) SETI(iload, INPUT_ILOAD)
+  SETI(rng_control, INPUT_RNG_CONTROL) SETI(spectrum_mode, INPUT_SPECTRUM_MODE)
   if (strcmp(key, "stdout") == 0 && ni > 0) {
     p->stdout_unit = ints[0];
+    mark_input(seen, INPUT_STDOUT);
     return;
   }
-  SETR(nonlinear) SETR(paranl) SETR(tstep) SETR(a) SETR(a0) SETR(a1)
-  SETR(q0) SETR(q1) SETR(q2) SETR(rc) SETR(rw) SETR(aion) SETR(qion)
-  SETR(kappati) SETR(kappate) SETR(kappan) SETR(tite) SETR(flow0)
-  SETR(flow1) SETR(flow2) SETR(r0) SETR(b0) SETR(temperature)
-  SETR(edensity0) SETR(umax)
+  SETR(nonlinear, INPUT_NONLINEAR) SETR(paranl, INPUT_PARANL)
+  SETR(tstep, INPUT_TSTEP) SETR(a, INPUT_A) SETR(a0, INPUT_A0)
+  SETR(a1, INPUT_A1) SETR(q0, INPUT_Q0) SETR(q1, INPUT_Q1)
+  SETR(q2, INPUT_Q2) SETR(rc, INPUT_RC) SETR(rw, INPUT_RW)
+  SETR(aion, INPUT_AION) SETR(qion, INPUT_QION)
+  SETR(kappati, INPUT_KAPPATI) SETR(kappate, INPUT_KAPPATE)
+  SETR(kappan, INPUT_KAPPAN) SETR(tite, INPUT_TITE)
+  SETR(flow0, INPUT_FLOW0) SETR(flow1, INPUT_FLOW1) SETR(flow2, INPUT_FLOW2)
+  SETR(r0, INPUT_R0) SETR(b0, INPUT_B0) SETR(temperature, INPUT_TEMPERATURE)
+  SETR(edensity0, INPUT_EDENSITY0) SETR(umax, INPUT_UMAX)
 #undef SETI
 #undef SETR
 }
 
-static void read_input_params(GtcParameters *p) {
+static void append_missing_input(char *buffer, size_t buffer_size, const char *name) {
+  if (buffer_size == 0) return;
+  const size_t used = strlen(buffer);
+  if (used >= buffer_size - 1) return;
+  if (used > 0) strncat(buffer, ", ", buffer_size - strlen(buffer) - 1);
+  strncat(buffer, name, buffer_size - strlen(buffer) - 1);
+}
+
+static void validate_required_inputs(GtcState *s, unsigned long long seen) {
+  const unsigned long long missing_mask = required_input_mask & ~seen;
+  if (missing_mask) {
+    char missing[1024] = "";
+    for (int i = 0; i < INPUT_COUNT; i++) {
+      if (missing_mask & (1ull << i)) append_missing_input(missing, sizeof(missing), input_names[i]);
+    }
+    char message[1200];
+    snprintf(message, sizeof(message), "missing required gtc.input parameter(s): %s", missing);
+    gtc_die(s, message);
+  }
+  if (s->p.spectrum_mode < GTC_SPECTRUM_FULL_N || s->p.spectrum_mode > GTC_SPECTRUM_SINGLE_N) {
+    gtc_die(s, "spectrum_mode must be 0/full_n or 1/selected_n");
+  }
+  if (s->p.spectrum_mode == GTC_SPECTRUM_SINGLE_N && !(seen & INPUT_BIT(NMODE))) {
+    gtc_die(s, "missing required gtc.input parameter: nmode when spectrum_mode=1");
+  }
+  if (s->p.nonlinear < 0.5 && s->p.spectrum_mode == GTC_SPECTRUM_SINGLE_N &&
+      !(seen & INPUT_BIT(MMODE))) {
+    gtc_die(s, "missing required gtc.input parameter: mmode for linear selected-mode history");
+  }
+}
+
+static void read_input_params(GtcState *s, unsigned long long *seen) {
+  GtcParameters *p = &s->p;
   FILE *fp = fopen("gtc.input", "r");
-  if (!fp) return;
+  if (!fp) gtc_die(s, "cannot open required gtc.input");
   int num_mmode = 0;
 
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
-    return;
+    gtc_die(s, "cannot seek required gtc.input");
   }
   long len = ftell(fp);
   if (len < 0) {
     fclose(fp);
-    return;
+    gtc_die(s, "cannot determine required gtc.input size");
   }
   rewind(fp);
   char *raw = calloc((size_t)len + 2u, 1);
@@ -187,7 +275,7 @@ static void read_input_params(GtcParameters *p) {
     free(buf);
     free(raw);
     fclose(fp);
-    return;
+    gtc_die(s, "cannot allocate gtc.input parser buffer");
   }
   size_t nread = fread(raw, 1, (size_t)len, fp);
   raw[nread] = '\0';
@@ -215,7 +303,12 @@ static void read_input_params(GtcParameters *p) {
 
   char *cursor = buf;
   while (*cursor) {
-    while (*cursor && (*cursor == '&' || *cursor == '/' || *cursor == ',' || isspace((unsigned char)*cursor))) cursor++;
+    while (*cursor && (*cursor == '/' || *cursor == ',' || isspace((unsigned char)*cursor))) cursor++;
+    if (*cursor == '&') {
+      cursor++;
+      while (*cursor && (isalnum((unsigned char)*cursor) || *cursor == '_')) cursor++;
+      continue;
+    }
     if (!*cursor) break;
     char *eq = strchr(cursor, '=');
     if (!eq) break;
@@ -241,7 +334,7 @@ static void read_input_params(GtcParameters *p) {
     }
     char saved = *next;
     *next = '\0';
-    assign_values(p, key, value, &num_mmode);
+    assign_values(p, key, value, &num_mmode, seen);
     *next = saved;
     cursor = next;
     if (saved == '=') {
@@ -260,6 +353,9 @@ static void read_input_params(GtcParameters *p) {
       if (mmode) {
         for (int i = 0; i < p->num_mode; i++) mmode[i] = source[i];
         p->mmode = mmode;
+      } else {
+        free(source);
+        gtc_die(s, "cannot allocate mmode input list");
       }
     }
     free(source);
@@ -298,12 +394,16 @@ static void write_input_parameters(FILE *out, const GtcParameters *p) {
 }
 
 void setup(GtcState *s) {
-  defaults(&s->p);
+  initialize_parameters(&s->p);
   s->partd_comm = MPI_COMM_NULL;
   s->toroidal_comm = MPI_COMM_NULL;
   MPI_Comm_rank(MPI_COMM_WORLD, &s->rank);
   MPI_Comm_size(MPI_COMM_WORLD, &s->size);
-  if (s->rank == 0) read_input_params(&s->p);
+  unsigned long long seen = 0;
+  if (s->rank == 0) {
+    read_input_params(s, &seen);
+    validate_required_inputs(s, seen);
+  }
 
   int *root_nmode = s->p.nmode;
   int *root_mmode = s->p.mmode;
@@ -314,9 +414,6 @@ void setup(GtcState *s) {
   } else {
     s->p.nmode = NULL;
     s->p.mmode = NULL;
-  }
-  if (s->p.spectrum_mode < GTC_SPECTRUM_FULL_N || s->p.spectrum_mode > GTC_SPECTRUM_SINGLE_N) {
-    s->p.spectrum_mode = GTC_SPECTRUM_FULL_N;
   }
   if (s->p.num_mode < 0) s->p.num_mode = 0;
   const int filter_spectrum = s->p.spectrum_mode == GTC_SPECTRUM_SINGLE_N;

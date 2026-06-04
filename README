@@ -41,6 +41,12 @@ is written only for linear selected-mode runs (`NONLINEAR<0.5` and
 The generated `gtc.input` includes comments for each parameter so case
 directories remain self-describing.
 
+The C executable treats `gtc.input` as the source of truth for case
+parameters. Required scalar inputs such as grid sizes, marker count, safety
+factor coefficients, profile controls, boundary width, and density must be
+present in `gtc.input`; missing required values stop the run instead of falling
+back to compiled-in defaults.
+
 Set `KEEP_RESTART=1` if you want to retain restart files. They are removed by
 default to keep the case folder small.
 
