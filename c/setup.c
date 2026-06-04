@@ -288,7 +288,6 @@ static void write_input_parameters(FILE *out, const GtcParameters *p) {
   fprintf(out, " ! spectrum_mode: 0 keeps all toroidal n in the field, 1 filters evolution to nmode\n");
   fprintf(out, " ! nmode selects toroidal mode numbers for history and snapshot diagnostics\n");
   fprintf(out, " rng_control=%d, spectrum_mode=%d,\n", p->rng_control, p->spectrum_mode);
-  fprintf(out, " num_mode=%d,\n", p->num_mode);
   fprintf(out, " nmode=");
   for (int i = 0; i < p->num_mode; i++) fprintf(out, "%s%d", i == 0 ? "" : ",", p->nmode[i]);
   if (p->mmode) {
