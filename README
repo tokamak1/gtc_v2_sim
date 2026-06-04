@@ -23,26 +23,30 @@ Useful runtime overrides:
 MPI_NP=10 MSTEP=1000 MSNAP=10 CASE_DIR=itg_run_1000 ./run_itg_cyclone_base_nonlinear_zonal.sh
 ```
 
-C/OpenMP hybrid runtime:
+C/OpenMP runtime:
 
 ```sh
+./run_itg_cyclone_base_nonlinear_zonal_c.sh
 GTC_LAYOUT=auto GTC_CORES=10 MZETAMAX=16 ./run_itg_cyclone_base_nonlinear_zonal_c.sh
-GTC_LAYOUT=omp GTC_CORES=10 MZETAMAX=37 ./run_itg_cyclone_base_nonlinear_zonal_c.sh
 GTC_LAYOUT=mpi GTC_CORES=10 MZETAMAX=16 ./run_itg_cyclone_base_nonlinear_zonal_c.sh
 GTC_LAYOUT=manual MPI_NP=2 OMP_NUM_THREADS=5 MZETAMAX=16 ./run_itg_cyclone_base_nonlinear_zonal_c.sh
 MPI_NP=2 OMP_NUM_THREADS=5 MZETAMAX=16 ./run_itg_cyclone_base_nonlinear_zonal_c.sh
 ```
 
-`GTC_LAYOUT=auto` chooses one unified MPI/OpenMP layout, including the two
-endpoints: single-rank multi-thread (`omp`) and multi-rank single-thread
-(`mpi`). Automatic layouts use an MPI rank count that divides `MZETAMAX`, so
-the requested number of toroidal planes is preserved. When `GTC_LAYOUT` is set,
-it owns the layout decision; use `GTC_LAYOUT=manual` for explicit
-`MPI_NP`/`OMP_NUM_THREADS` runs.
+The C run script defaults to the fastest measured local layout for the linear
+ITG benchmark on this Mac: one MPI rank and ten OpenMP threads
+(`GTC_LAYOUT=omp`, `GTC_CORES=10`). `GTC_LAYOUT=auto` chooses one unified
+MPI/OpenMP layout, including the two endpoints: single-rank multi-thread
+(`omp`) and multi-rank single-thread (`mpi`). Automatic layouts use an MPI rank
+count that divides `MZETAMAX`, so the requested number of toroidal planes is
+preserved. When `GTC_LAYOUT` is set, it owns the layout decision; use
+`GTC_LAYOUT=manual` for explicit `MPI_NP`/`OMP_NUM_THREADS` runs.
 
 For C runs, nonlinear full-n cases write only `nmode` mode selections. `mmode`
 is written only for linear selected-mode runs (`NONLINEAR<0.5` and
 `SPECTRUM_MODE=1`), where the history diagnostics need paired `(n,m)` modes.
+The generated `gtc.input` includes comments for each parameter so case
+directories remain self-describing.
 
 Set `KEEP_RESTART=1` if you want to retain restart files. They are removed by
 default to keep the case folder small.
