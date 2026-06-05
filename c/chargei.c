@@ -19,6 +19,9 @@ void chargei(GtcState *s) {
   GtcReal *delt = gtc_xcalloc(s, (size_t)(s->p.mpsi + 1), sizeof(*delt), "charge delt");
   for (int i = 0; i <= s->p.mpsi; i++) delt[i] = gtc_real(2.0 * s->pi / s->deltat[i]);
 
+#ifdef GTC_USE_METAL
+  if (!gtc_gpu_chargei_prepare(s, delt, delr, delz, smu_inv, pi2_inv, single_zeta_cell)) {
+#endif
 GTC_OMP_PARALLEL_FOR_STATIC
   for (int m = 0; m < s->mi; m++) {
     const GtcReal *zion = &s->zion[(size_t)m * (size_t)GTC_NPARAM];
@@ -64,6 +67,9 @@ GTC_OMP_PARALLEL_FOR_STATIC
       s->wtion1[o] = tdum - (GtcReal)j01;
     }
   }
+#ifdef GTC_USE_METAL
+  }
+#endif
 
   if (s->istep == 0) {
     free(delt);

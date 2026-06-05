@@ -207,4 +207,22 @@ void fftc1d(int isign, int irank, GtcReal scale, GtcReal *x);
 
 void gtc_free(GtcState *s);
 
+#ifdef GTC_USE_METAL
+int gtc_gpu_enabled(void);
+const char *gtc_gpu_backend_name(void);
+int gtc_gpu_chargei_prepare(GtcState *s, const GtcReal *delt, GtcReal delr,
+                            GtcReal delz, GtcReal smu_inv, GtcReal pi2_inv,
+                            int single_zeta_cell);
+int gtc_gpu_pushi_general(GtcState *s, const GtcReal *temp_inv,
+                          const GtcReal *vdrtmp, int has_vdrtmp,
+                          int linear_orbit, GtcReal delr, GtcReal pi2,
+                          GtcReal psimax, GtcReal cmratio, GtcReal cinv,
+                          GtcReal vthi, GtcReal ainv, GtcReal sbound,
+                          GtcReal dtime);
+int gtc_gpu_pushi_linear_orbit(GtcState *s, const GtcReal *temp_inv,
+                               GtcReal delr, GtcReal pi2, GtcReal psimax,
+                               GtcReal cmratio, GtcReal cinv, GtcReal vthi,
+                               GtcReal ainv, GtcReal sbound, GtcReal dtime);
+#endif
+
 #endif

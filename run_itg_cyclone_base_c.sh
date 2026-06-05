@@ -7,21 +7,44 @@ root="$(cd "$(dirname "$0")" && pwd)"
 MPI_NP=1
 OMP_NUM_THREADS=10
 
-case_dir="${CASE_DIR:-$root/itg_cyclone_base_c}"
-exe="${GTC_EXE:-$root/gtc_c}"
+# Switch between pure CPU and CPU-GPU binaries here, or override with
+# GTC_BACKEND=cpu|metal on the command line.
+GTC_BACKEND="${GTC_BACKEND:-cpu}"
+case "$GTC_BACKEND" in
+  cpu)
+    exe="${GTC_EXE:-$root/gtc_c}"
+    export GTC_GPU=0
+    ;;
+  metal|gpu|cpu-gpu|cpu_gpu)
+    GTC_BACKEND=metal
+    exe="${GTC_EXE:-$root/gtc_c_metal}"
+    export GTC_GPU="${GTC_GPU:-metal}"
+    ;;
+  *)
+    echo "unknown GTC_BACKEND=$GTC_BACKEND; use cpu or metal" >&2
+    exit 1
+    ;;
+esac
+
+case_dir="${CASE_DIR:-$root/itg_cyclone_base_${GTC_BACKEND}}"
 keep_restart="${KEEP_RESTART:-0}"
 restart_source="${RESTART_SOURCE:-}"
 parallel_total_workers=$(( MPI_NP * OMP_NUM_THREADS ))
 
 if [[ ! -x "$exe" ]]; then
   echo "missing executable: $exe" >&2
-  echo "build it with: make c" >&2
+  if [[ "$GTC_BACKEND" == "metal" ]]; then
+    echo "build it with: make c METAL=1 C_TARGET=gtc_c_metal" >&2
+  else
+    echo "build it with: make c METAL=0 C_TARGET=gtc_c" >&2
+  fi
   exit 1
 fi
 
 export OMP_NUM_THREADS
 export OMP_PROC_BIND="${OMP_PROC_BIND:-spread}"
 export OMP_PLACES="${OMP_PLACES:-cores}"
+echo "backend: $GTC_BACKEND exe=$exe gpu_request=${GTC_GPU:-0}"
 echo "parallel: mpi_np=$MPI_NP omp_threads=$OMP_NUM_THREADS total_workers=$parallel_total_workers"
 
 if [[ -e "$case_dir" ]]; then
@@ -183,7 +206,10 @@ if [[ "$run_status" -ne 0 ]] && ! grep -q 'Program ends' run.log; then
 fi
 
 {
-  echo "case,cyclone_base_c"
+  echo "case,cyclone_base_${GTC_BACKEND}"
+  echo "backend,$GTC_BACKEND"
+  echo "executable,$exe"
+  echo "gpu_request,${GTC_GPU:-0}"
   echo "mpirun_exit_code,$run_status"
   if grep -q 'Program ends' run.log; then
     echo "gtc_completed,1"

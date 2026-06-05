@@ -122,6 +122,40 @@ GTC_OMP_PARALLEL_FOR_STATIC
   const GtcReal *restrict wtion1 = s->wtion1;
 
   if (linear_orbit && idiag != 0) {
+#ifdef GTC_USE_METAL
+    if (gtc_gpu_pushi_linear_orbit(s, temp_inv, delr, pi2, psimax, cmratio,
+                                   cinv, vthi, ainv, sbound, dtime)) {
+      if (profile) {
+        const double now = MPI_Wtime();
+        pushi_profile.advance += now - profile_tick;
+        profile_tick = now;
+      }
+      if (s->irk == 2) {
+GTC_OMP_PARALLEL_FOR_STATIC
+        for (int m = 0; m < s->mi; m++) {
+          GtcReal *zion = &s->zion[(size_t)m * (size_t)GTC_NPARAM];
+          const GtcReal *zion0 = &s->zion0[(size_t)m * (size_t)GTC_NPARAM];
+          if (zion[GTC_Z_PSI] > psimax || zion[GTC_Z_PSI] < psimin) {
+            zion[GTC_Z_PSI] = zion0[GTC_Z_PSI];
+            zion[GTC_Z_THETA] = gtc_real(2.0 * s->pi - zion0[GTC_Z_THETA]);
+            zion[GTC_Z_ZETA] = zion0[GTC_Z_ZETA];
+            zion[GTC_Z_U] = zion0[GTC_Z_U];
+            zion[GTC_Z_WEIGHT] = zion0[GTC_Z_WEIGHT];
+          }
+        }
+      }
+      if (profile) {
+        const double now = MPI_Wtime();
+        pushi_profile.boundary += now - profile_tick;
+        pushi_profile.total += now - profile_start;
+        pushi_profile.calls++;
+        pushi_profile_report(s);
+      }
+      free(vdrtmp);
+      free(temp_inv);
+      return;
+    }
+#endif
 GTC_OMP_PARALLEL_FOR_STATIC
     for (int m = 0; m < s->mi; m++) {
       GtcReal *zion = &s->zion[(size_t)m * (size_t)GTC_NPARAM];
@@ -264,6 +298,11 @@ GTC_OMP_PARALLEL_FOR_STATIC
     return;
   }
 
+#ifdef GTC_USE_METAL
+  if (!gtc_gpu_pushi_general(s, temp_inv, vdrtmp, vdrtmp != NULL, linear_orbit,
+                             delr, pi2, psimax, cmratio, cinv, vthi, ainv,
+                             sbound, dtime)) {
+#endif
 GTC_OMP_PARALLEL
   {
 GTC_OMP_FOR_STATIC
@@ -426,6 +465,9 @@ GTC_OMP_FOR_STATIC
     wpi2[m] = gtc_real(b);
   }
   }
+#ifdef GTC_USE_METAL
+  }
+#endif
   if (profile) {
     const double now = MPI_Wtime();
     pushi_profile.advance += now - profile_tick;

@@ -479,6 +479,9 @@ void setup(GtcState *s) {
       fprintf(out, "\n===================================\n");
       fprintf(out, " Run with MPI ranks=%d, toroidal ranks=%d, OpenMP threads/rank=%d\n",
               s->size, s->ntoroidal, gtc_omp_max_threads());
+#ifdef GTC_USE_METAL
+      fprintf(out, " GPU backend=%s\n", gtc_gpu_backend_name());
+#endif
       fprintf(out, "===================================\n\n");
       fprintf(out, "*******************************************************\n");
       fprintf(out, "  Using npartdom= %d and ntoroidal= %d\n", s->p.npartdom, s->ntoroidal);
